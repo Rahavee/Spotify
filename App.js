@@ -1,13 +1,16 @@
 import 'react-native-gesture-handler';
 import React, {Component, useState} from 'react';
-import {TouchableOpacity, StyleSheet, Text, View, TextInput, ScrollView, FlatList} from 'react-native';
+import {TouchableOpacity, StyleSheet, Text, Button, Image, View, TextInput, ScrollView, FlatList} from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import {NavigationContainer} from "@react-navigation/native";
 import {createStackNavigator} from "@react-navigation/stack";
 import axios from 'axios';
+import {Icon} from 'react-native-elements'
+import {Audio} from 'expo-av';
 
 
 const Stack = createStackNavigator();
+
 
 function login({navigation}) {
     const CLIENT_ID = '34ca0492a0054c57a053f785f812aeb5';
@@ -85,19 +88,28 @@ function home({route, navigation}) {
     const [value, setValue] = useState("");
     let [search, setSearch] = useState([]);
 
+
     async function startSearch(text) {
-        const fetch = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(text)}&type=track&limit=5`, {
+        const fetch = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(text)}&type=track&limit=1`, {
             headers: {
                 "Authorization": `Bearer ${token.params.access_token}`
             }
         });
         if (fetch.data !== undefined) {
-            for (let i = 0; i < 5; i++) {
-                search[i]=(fetch.data.tracks.items[i].name);
+            let searchData = [];
+            const {items} = fetch.data.tracks;
+            for (let i = 0; i < 1; i++) {
+                searchData.push({
+                    name: items[i].name,
+                    album: items[i].album.name,
+                    artist: items[i].artists[0].name,
+                    image: items[i].album.images[0],
+                    play: items[i].preview_url
+                });
             }
+            setSearch(searchData);
         }
     }
-    console.log("this is new mwe");
 
     return (
         <View>
@@ -115,13 +127,14 @@ function home({route, navigation}) {
             <ScrollView style={styles.container2}>
                 <FlatList
                     data={search}
+                    extraData={value}
                     renderItem={({item}) =>
                         <TouchableOpacity
                             style={styles.list}
-                            onPress={() => navigation.navigate("track")}>
-                            < Text> {item}</Text>
+                            onPress={() => navigation.navigate("track", {item, token})}>
+                            < Text> {item.name}</Text>
                         </TouchableOpacity>}
-                    keyExtractor={item => item.id}
+                    keyExtractor={item => item.name}
                 />
             </ScrollView>
         </View>
@@ -129,12 +142,83 @@ function home({route, navigation}) {
 }
 
 function track({route, navigation}) {
-    return(
+    const {item} = route.params;
+    const {token} = route.params;
+    const [player, setPlayer] = useState(new Audio.Sound());
+
+    const [playing, pressed] = useState(false);
+
+    async function load() {
+        console.log(item.play);
+        if (item.play !== null) {
+            await player.loadAsync(
+                {uri: item.play}
+            );
+        }
+    }
+
+    React.useEffect(() => {
+        load().then(console.log("Song loaded"))
+    }, []);
+
+    return (
         <View>
+            <Text>Image goes here</Text>
+            <Image style={{width: 300, height: 300}} source={{
+                uri: item.image.url
+            }}/>
+            <Text>item.name</Text>
+            <Text>item.artist</Text>
+            <Text>item.album</Text>
+            <Icon reverse name={playing ? "pause" : "play-arrow"}
+                  onPress={async () => {
+                      if (item.play !== null) {
+                          if (playing) {
+                              await player.pauseAsync();
+                              pressed(!playing);
+                          } else {
+                              await player.playAsync();
+                              pressed(!playing);
+                          }
+                      } else {
+                          alert("No playable audio found for this track")
+                      }
+                  }}/>
+            <Icon reverse name="add"
+                  onPress={() => {
+                      navigation.navigate("playlist", {token})
+                  }}/>
+
 
         </View>
     );
 
+}
+
+function playlist({route, navigation}) {
+    const {token} = route.params;
+    let fetchedPlayList=[];
+    async function getPlaylist() {
+        const fetch = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
+            headers: {
+                "Authorization": `Bearer ${token.params.access_token}`
+            }
+        });
+        if (fetch.data !== null) {
+            for (let i = 0; i < fetch.data.items.length; i++) {
+                fetchedPlayList.push(fetch.data.items[i]);
+            }
+        }
+        console.log(fetchedPlayList);
+    }
+
+    getPlaylist().then(console.log("done"));
+
+    return (
+        <View>
+        {/*    <FlatList data={playList} renderItem={({item})=><TouchableOpacity>{item}</TouchableOpacity>}/>*/}
+        </View>
+    )
 }
 
 export default function App() {
@@ -146,6 +230,7 @@ export default function App() {
                 <Stack.Screen name="login" component={login}/>
                 <Stack.Screen name="home" component={home}/>
                 <Stack.Screen name="track" component={track}/>
+                <Stack.Screen name="playlist" component={playlist}/>
             </Stack.Navigator>
         </NavigationContainer>
     );

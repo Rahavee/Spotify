@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import React, {Component, useState} from 'react';
-import {TouchableOpacity, StyleSheet, Text, Button, Image, View, TextInput, ScrollView, FlatList} from 'react-native';
+import {TouchableOpacity, StyleSheet, Text, SectionList, Button, Image, View, TextInput, ScrollView, FlatList} from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import {NavigationContainer} from "@react-navigation/native";
 import {createStackNavigator} from "@react-navigation/stack";
@@ -10,6 +10,20 @@ import {Audio} from 'expo-av';
 
 
 const Stack = createStackNavigator();
+export default function App() {
+
+    console.log("app rendered");
+    return (
+        <NavigationContainer>
+            <Stack.Navigator>
+                {/*<Stack.Screen name="login" component={login}/>*/}
+                {/*<Stack.Screen name="home" component={home}/>*/}
+                {/*<Stack.Screen name="track" component={track}/>*/}
+                <Stack.Screen name="playlist" component={playlist}/>
+            </Stack.Navigator>
+        </NavigationContainer>
+    );
+}
 
 
 function login({navigation}) {
@@ -34,6 +48,7 @@ function login({navigation}) {
                 }
             });
             setUserInfo(userInfo.data);
+            console.log(results.params.access_token);
         }
     };
     const displayError = () => {
@@ -63,6 +78,7 @@ function login({navigation}) {
             )
         }
     };
+
     return (
         <View style={styles.container}>
             <TouchableOpacity
@@ -196,45 +212,74 @@ function track({route, navigation}) {
 }
 
 function playlist({route, navigation}) {
-    const {token} = route.params;
-    let fetchedPlayList=[];
+    //const {token} = route.params;
+    const [playlist, setPlaylist] = useState([]);
+    const [tracks, setTracks] = useState([[]]);
+    const [more, setMore] = useState(false);
+
     async function getPlaylist() {
         const fetch = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
             headers: {
-                "Authorization": `Bearer ${token.params.access_token}`
+                "Authorization": `Bearer BQC_9BBkC8gqKJM3kwnaYOqaS-xnf0-Tp6naruxTG7A888yI2-EvaUCy9LQh1-5-GIqL3I9M7LnsnlnALnxHsbh4vY46__IUpFehetVxhnWmRFjrU68Lprpo38A8Gt7MUACjCW-09qJlfyjnnQNa5rduhNHl8OSvQmaO`
             }
         });
+        let fetchedPlayList = [];
         if (fetch.data !== null) {
             for (let i = 0; i < fetch.data.items.length; i++) {
-                fetchedPlayList.push(fetch.data.items[i]);
+                fetchedPlayList.push({name: fetch.data.items[i].name, id:fetch.data.items[i].id, tracks:[]});
             }
+            setPlaylist(fetchedPlayList);
         }
-        console.log(fetchedPlayList);
+
     }
 
-    getPlaylist().then(console.log("done"));
+    async function getPlayListItems(id, index){
+        const fetch = await axios.get(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
+            headers: {
+                "Authorization": `Bearer BQC_9BBkC8gqKJM3kwnaYOqaS-xnf0-Tp6naruxTG7A888yI2-EvaUCy9LQh1-5-GIqL3I9M7LnsnlnALnxHsbh4vY46__IUpFehetVxhnWmRFjrU68Lprpo38A8Gt7MUACjCW-09qJlfyjnnQNa5rduhNHl8OSvQmaO`
+            }
+        });
+        //console.log(fetch.data);
+        if (fetch.data!==null){
+            let data=playlist;
+            for (let j=0; j<playlist.length; j++) {
+                for (let i = 0; i < fetch.data.items.length; i++) {
+                    if (data[j].id===id) {
+                        data[j].tracks.push(fetch.data.items[i].track.name)
+                    }
+                }
+            }
+            setPlaylist(data);
+            const myTracks = tracks;
+            myTracks[index] = data;
+            setTracks(myTracks);
+        }
 
+    }
+
+    React.useEffect(() => {
+        getPlaylist().then();
+    }, []);
     return (
         <View>
-        {/*    <FlatList data={playList} renderItem={({item})=><TouchableOpacity>{item}</TouchableOpacity>}/>*/}
+            <FlatList data={playlist}
+                      extraData={tracks}
+                      renderItem={({item, index}) => <View><Text>{item.name} {index}<Icon
+                          name='add'
+                          onPress={()=>{getPlayListItems(item.id, index).then();
+                          console.log(tracks);
+                          setMore(true)}}/>
+                      </Text>
+                          <FlatList data={["summer"]} renderItem={({item2})=><Text>{item2}</Text>}/>
+
+                      </View>}
+
+                      keyExtractor={item => item.name}/>
         </View>
     )
 }
 
-export default function App() {
 
-    console.log("app rendered");
-    return (
-        <NavigationContainer>
-            <Stack.Navigator>
-                <Stack.Screen name="login" component={login}/>
-                <Stack.Screen name="home" component={home}/>
-                <Stack.Screen name="track" component={track}/>
-                <Stack.Screen name="playlist" component={playlist}/>
-            </Stack.Navigator>
-        </NavigationContainer>
-    );
-}
 
 const styles = StyleSheet.create({
     container: {

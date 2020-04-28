@@ -1,6 +1,17 @@
 import 'react-native-gesture-handler';
 import React, {Component, useState} from 'react';
-import {TouchableOpacity, StyleSheet, Text, SectionList, Button, Image, View, TextInput, ScrollView, FlatList} from 'react-native';
+import {
+    TouchableOpacity,
+    StyleSheet,
+    Text,
+    SectionList,
+    Button,
+    Image,
+    View,
+    TextInput,
+    ScrollView,
+    FlatList
+} from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import {NavigationContainer} from "@react-navigation/native";
 import {createStackNavigator} from "@react-navigation/stack";
@@ -214,45 +225,41 @@ function track({route, navigation}) {
 function playlist({route, navigation}) {
     //const {token} = route.params;
     const [playlist, setPlaylist] = useState([]);
-    const [tracks, setTracks] = useState([[]]);
-    const [more, setMore] = useState(false);
+    let [tracks, setTracks] = useState([]);
+    let [more, setMore] = useState([]);
 
     async function getPlaylist() {
         const fetch = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
             headers: {
-                "Authorization": `Bearer BQC_9BBkC8gqKJM3kwnaYOqaS-xnf0-Tp6naruxTG7A888yI2-EvaUCy9LQh1-5-GIqL3I9M7LnsnlnALnxHsbh4vY46__IUpFehetVxhnWmRFjrU68Lprpo38A8Gt7MUACjCW-09qJlfyjnnQNa5rduhNHl8OSvQmaO`
+                "Authorization": `Bearer BQC4bCY9-b73T4xLwvYB6kD_S70WHUCwKvIdVwbxTu_HUvmgMVkQuGPQO-3nTpvOHRwmXwKT0q8DtFvZaSuy_TFkBo75fqp36HVm5MLiqMbQFEAhMxG0pZ9tUVLtxRXBWNTTsLPq9LpWQes3TDIAI8gBj7xc_jC9YeZr`
             }
         });
         let fetchedPlayList = [];
         if (fetch.data !== null) {
             for (let i = 0; i < fetch.data.items.length; i++) {
-                fetchedPlayList.push({name: fetch.data.items[i].name, id:fetch.data.items[i].id, tracks:[]});
+                fetchedPlayList.push({name: fetch.data.items[i].name, id: fetch.data.items[i].id, tracks: []});
             }
             setPlaylist(fetchedPlayList);
         }
 
     }
 
-    async function getPlayListItems(id, index){
+    async function getPlayListItems(id, index) {
+        for (let j=0; j<playlist.length; j++) {
+            more[j] = j === index;
+        }
         const fetch = await axios.get(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
             headers: {
-                "Authorization": `Bearer BQC_9BBkC8gqKJM3kwnaYOqaS-xnf0-Tp6naruxTG7A888yI2-EvaUCy9LQh1-5-GIqL3I9M7LnsnlnALnxHsbh4vY46__IUpFehetVxhnWmRFjrU68Lprpo38A8Gt7MUACjCW-09qJlfyjnnQNa5rduhNHl8OSvQmaO`
+                "Authorization": `Bearer BQC4bCY9-b73T4xLwvYB6kD_S70WHUCwKvIdVwbxTu_HUvmgMVkQuGPQO-3nTpvOHRwmXwKT0q8DtFvZaSuy_TFkBo75fqp36HVm5MLiqMbQFEAhMxG0pZ9tUVLtxRXBWNTTsLPq9LpWQes3TDIAI8gBj7xc_jC9YeZr`
             }
         });
         //console.log(fetch.data);
-        if (fetch.data!==null){
-            let data=playlist;
-            for (let j=0; j<playlist.length; j++) {
-                for (let i = 0; i < fetch.data.items.length; i++) {
-                    if (data[j].id===id) {
-                        data[j].tracks.push(fetch.data.items[i].track.name)
-                    }
-                }
+        if (fetch.data !== null) {
+            let data = [];
+            for (let i = 0; i < fetch.data.items.length; i++) {
+                data.push(fetch.data.items[i].track.name)
             }
-            setPlaylist(data);
-            const myTracks = tracks;
-            myTracks[index] = data;
-            setTracks(myTracks);
+            setTracks(data);
         }
 
     }
@@ -264,21 +271,29 @@ function playlist({route, navigation}) {
         <View>
             <FlatList data={playlist}
                       extraData={tracks}
-                      renderItem={({item, index}) => <View><Text>{item.name} {index}<Icon
-                          name='add'
-                          onPress={()=>{getPlayListItems(item.id, index).then();
-                          console.log(tracks);
-                          setMore(true)}}/>
-                      </Text>
-                          <FlatList data={["summer"]} renderItem={({item2})=><Text>{item2}</Text>}/>
+                      renderItem={({item, index}) => (<TouchableOpacity>
+                          <Text>{item.name}<Icon
+                              name='add'
+                              onPress={() => {
+                                  getPlayListItems(item.id, index).then();
+                              }}/>
+                          </Text>
+                          <FlatList data={tracks} renderItem={({item}) =>{
+                              if(more[index]){
+                                  return(<Text>{item}</Text>)
+                              }
+                              else{
+                                  return(<View/>);
+                              }
+                          } }
+                                    keyExtractor={item => item.name}/>
 
-                      </View>}
+                      </TouchableOpacity>)}
 
                       keyExtractor={item => item.name}/>
         </View>
     )
 }
-
 
 
 const styles = StyleSheet.create({

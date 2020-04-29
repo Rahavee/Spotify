@@ -25,7 +25,7 @@ export default function App() {
     return (
         <NavigationContainer>
             <Stack.Navigator>
-                {/*<Stack.Screen name="login" component={login}/>*/}
+                <Stack.Screen name="login" component={login}/>
                 <Stack.Screen name="home" component={home}/>
                 <Stack.Screen name="track" component={track}/>
                 <Stack.Screen name="playlist" component={playlist}/>
@@ -108,7 +108,7 @@ function login({navigation}) {
 }
 
 function home({route, navigation}) {
-    const token = 'BQBmDj7a-nc6bXypkERnOKLuRRpkeyjfAV-qtdWHFUrsYTwnFmvjGWwtrjiCO6uDGK4nxdL_tdllQ-O5I3LaCrrj_PWjW0K0xELlpg6YA3Qo3oMP_j6JdDxmMQ9RNY6ImvfsFvTwMq1QbuuEiscWc9lWLMVyS_Ojr80n';
+    const token = 'BQCDW1_6LpNoC7zpHebq_rY8eKqJgtTyFRHCwV4A8YwmjfBFT_ITlX15bDjijFqaQ_sAkMHW4N8P19p3gJh3vNZoyOmQbUUUDtOwelC1vwqbTJPGN-oRsbP-dLvGbjL6cDq-jYS01wB0ZtC9gJC9L7b0u35XxvWAJekM';
     const [value, setValue] = useState("");
     let [search, setSearch] = useState([]);
 
@@ -233,6 +233,7 @@ function playlist({route, navigation}) {
         const fetch = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
             headers: {
                 "Authorization": `Bearer ${token}`
+
             }
         });
         let fetchedPlayList = [];
@@ -254,7 +255,7 @@ function playlist({route, navigation}) {
                 "Authorization": `Bearer ${token}`
             }
         });
-        //console.log(fetch.data);
+
         if (fetch.data !== null) {
             let data = [];
             for (let i = 0; i < fetch.data.items.length; i++) {
@@ -291,16 +292,16 @@ function playlist({route, navigation}) {
             <FlatList data={playlist}
                       extraData={tracks}
                       renderItem={({item, index}) => (<TouchableOpacity
-                      onPress={()=>{addItemToPlaylist(index)}}>
+                      onPress={()=>{addItemToPlaylist(index).then()}}><View>
                           <Text>{item.name}<Icon
                               name='add'
                               onPress={() => {
                                   getPlayListItems(item.id, index).then();
                               }}/>
-                          </Text>
+                          </Text></View>
                           <FlatList data={tracks} renderItem={({item}) =>{
-                              if(more[index]){return(<Text>{item}</Text>)}
-                              else{return(<View/>);}
+                              // if(more[index]){return(<View><Text>{item}</Text>></View>)}
+                              {return(<View><Text>u</Text></View>);}
                           } }
                                     keyExtractor={item => item}/>
 

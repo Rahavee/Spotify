@@ -4,8 +4,6 @@ import {
     TouchableOpacity,
     StyleSheet,
     Text,
-    SectionList,
-    Button,
     Image,
     View,
     TextInput,
@@ -28,8 +26,8 @@ export default function App() {
         <NavigationContainer>
             <Stack.Navigator>
                 {/*<Stack.Screen name="login" component={login}/>*/}
-                {/*<Stack.Screen name="home" component={home}/>*/}
-                {/*<Stack.Screen name="track" component={track}/>*/}
+                <Stack.Screen name="home" component={home}/>
+                <Stack.Screen name="track" component={track}/>
                 <Stack.Screen name="playlist" component={playlist}/>
             </Stack.Navigator>
         </NavigationContainer>
@@ -52,7 +50,7 @@ function login({navigation}) {
             console.log(results.type);
             setDidError(true);
         } else {
-            setToken(results);
+            setToken(results.params.access_token);
             const userInfo = await axios.get(`https://api.spotify.com/v1/me`, {
                 headers: {
                     "Authorization": `Bearer ${results.params.access_token}`
@@ -96,8 +94,7 @@ function login({navigation}) {
                 style={styles.button}
                 onPress={userInfo ? () => {
                     navigation.navigate("home", {token})
-                } : handleSpotifyLogin}
-            >
+                } : handleSpotifyLogin}>
                 <Text style={styles.buttonText}>
                     {userInfo ? "Go to App" : "Login with Spotify"}
                 </Text>
@@ -111,7 +108,7 @@ function login({navigation}) {
 }
 
 function home({route, navigation}) {
-    const {token} = route.params;
+    const token = 'BQBmDj7a-nc6bXypkERnOKLuRRpkeyjfAV-qtdWHFUrsYTwnFmvjGWwtrjiCO6uDGK4nxdL_tdllQ-O5I3LaCrrj_PWjW0K0xELlpg6YA3Qo3oMP_j6JdDxmMQ9RNY6ImvfsFvTwMq1QbuuEiscWc9lWLMVyS_Ojr80n';
     const [value, setValue] = useState("");
     let [search, setSearch] = useState([]);
 
@@ -119,9 +116,10 @@ function home({route, navigation}) {
     async function startSearch(text) {
         const fetch = await axios.get(`https://api.spotify.com/v1/search?q=${encodeURIComponent(text)}&type=track&limit=1`, {
             headers: {
-                "Authorization": `Bearer ${token.params.access_token}`
+                "Authorization": `Bearer ${token}`
             }
         });
+
         if (fetch.data !== undefined) {
             let searchData = [];
             const {items} = fetch.data.tracks;
@@ -131,7 +129,8 @@ function home({route, navigation}) {
                     album: items[i].album.name,
                     artist: items[i].artists[0].name,
                     image: items[i].album.images[0],
-                    play: items[i].preview_url
+                    play: items[i].preview_url,
+                    ID: items[i].uri
                 });
             }
             setSearch(searchData);
@@ -213,7 +212,7 @@ function track({route, navigation}) {
                   }}/>
             <Icon reverse name="add"
                   onPress={() => {
-                      navigation.navigate("playlist", {token})
+                      navigation.navigate("playlist", {token:token, song:item})
                   }}/>
 
 
@@ -223,15 +222,17 @@ function track({route, navigation}) {
 }
 
 function playlist({route, navigation}) {
-    //const {token} = route.params;
+    const {song} = route.params;
+    const {token} = route.params;
     const [playlist, setPlaylist] = useState([]);
     let [tracks, setTracks] = useState([]);
     let [more, setMore] = useState([]);
 
+
     async function getPlaylist() {
         const fetch = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
             headers: {
-                "Authorization": `Bearer BQC4bCY9-b73T4xLwvYB6kD_S70WHUCwKvIdVwbxTu_HUvmgMVkQuGPQO-3nTpvOHRwmXwKT0q8DtFvZaSuy_TFkBo75fqp36HVm5MLiqMbQFEAhMxG0pZ9tUVLtxRXBWNTTsLPq9LpWQes3TDIAI8gBj7xc_jC9YeZr`
+                "Authorization": `Bearer ${token}`
             }
         });
         let fetchedPlayList = [];
@@ -250,7 +251,7 @@ function playlist({route, navigation}) {
         }
         const fetch = await axios.get(`https://api.spotify.com/v1/playlists/${id}/tracks`, {
             headers: {
-                "Authorization": `Bearer BQC4bCY9-b73T4xLwvYB6kD_S70WHUCwKvIdVwbxTu_HUvmgMVkQuGPQO-3nTpvOHRwmXwKT0q8DtFvZaSuy_TFkBo75fqp36HVm5MLiqMbQFEAhMxG0pZ9tUVLtxRXBWNTTsLPq9LpWQes3TDIAI8gBj7xc_jC9YeZr`
+                "Authorization": `Bearer ${token}`
             }
         });
         //console.log(fetch.data);
@@ -262,6 +263,24 @@ function playlist({route, navigation}) {
             setTracks(data);
         }
 
+
+    }
+
+    async function addItemToPlaylist(index){
+
+        try {
+            const fetch = await axios.post(`https://api.spotify.com/v1/playlists/${playlist[index].id}/tracks?uris=${song.ID}`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": `application/json`
+                },
+
+            });
+        }
+        catch(e){
+            console.log(e);
+        }
+        await getPlayListItems(playlist[index].id,index);
     }
 
     React.useEffect(() => {
@@ -271,7 +290,8 @@ function playlist({route, navigation}) {
         <View>
             <FlatList data={playlist}
                       extraData={tracks}
-                      renderItem={({item, index}) => (<TouchableOpacity>
+                      renderItem={({item, index}) => (<TouchableOpacity
+                      onPress={()=>{addItemToPlaylist(index)}}>
                           <Text>{item.name}<Icon
                               name='add'
                               onPress={() => {
@@ -279,14 +299,10 @@ function playlist({route, navigation}) {
                               }}/>
                           </Text>
                           <FlatList data={tracks} renderItem={({item}) =>{
-                              if(more[index]){
-                                  return(<Text>{item}</Text>)
-                              }
-                              else{
-                                  return(<View/>);
-                              }
+                              if(more[index]){return(<Text>{item}</Text>)}
+                              else{return(<View/>);}
                           } }
-                                    keyExtractor={item => item.name}/>
+                                    keyExtractor={item => item}/>
 
                       </TouchableOpacity>)}
 
